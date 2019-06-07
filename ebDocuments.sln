@@ -3,7 +3,50 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.28729.10
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "doc", "doc", "{A88E1A5F-AB23-4E5E-9944-F2CB2A588636}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EbDoc_Processor", "ebDoc_Processor\EbDoc_Processor.csproj", "{8BFB8CE9-9704-4464-A7D3-1FBC09B6ACEC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EbDoc_DAL", "EbDoc_DAL\EbDoc_DAL.csproj", "{722E2DFA-095D-414C-B2AD-5823057D1846}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EbDoc_FileProcessor_Tests", "EbDoc_FileProcessor_Tests\EbDoc_FileProcessor_Tests.csproj", "{C44D68BE-75D6-4B84-B979-596149B0BF79}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EbDoc_Archiver", "EbDoc_Archiver\EbDoc_Archiver.csproj", "{5660F83A-421F-4275-8D8F-04F66F9CBD56}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EbDoc_Metadata_Loader", "EbDoc_Metadata_Loader\EbDoc_Metadata_Loader.csproj", "{55B9FC49-730C-45EC-BC4C-B01A14834EC1}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{106DE523-A322-44AB-A72A-148FDCDE4E99}"
+	ProjectSection(SolutionItems) = preProject
+		..\..\lib\lzma.exe = ..\..\lib\lzma.exe
+	EndProjectSection
+EndProject
 Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8BFB8CE9-9704-4464-A7D3-1FBC09B6ACEC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8BFB8CE9-9704-4464-A7D3-1FBC09B6ACEC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8BFB8CE9-9704-4464-A7D3-1FBC09B6ACEC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8BFB8CE9-9704-4464-A7D3-1FBC09B6ACEC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{722E2DFA-095D-414C-B2AD-5823057D1846}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{722E2DFA-095D-414C-B2AD-5823057D1846}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{722E2DFA-095D-414C-B2AD-5823057D1846}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{722E2DFA-095D-414C-B2AD-5823057D1846}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C44D68BE-75D6-4B84-B979-596149B0BF79}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C44D68BE-75D6-4B84-B979-596149B0BF79}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C44D68BE-75D6-4B84-B979-596149B0BF79}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C44D68BE-75D6-4B84-B979-596149B0BF79}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5660F83A-421F-4275-8D8F-04F66F9CBD56}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5660F83A-421F-4275-8D8F-04F66F9CBD56}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5660F83A-421F-4275-8D8F-04F66F9CBD56}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5660F83A-421F-4275-8D8F-04F66F9CBD56}.Release|Any CPU.Build.0 = Release|Any CPU
+		{55B9FC49-730C-45EC-BC4C-B01A14834EC1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{55B9FC49-730C-45EC-BC4C-B01A14834EC1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{55B9FC49-730C-45EC-BC4C-B01A14834EC1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{55B9FC49-730C-45EC-BC4C-B01A14834EC1}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
