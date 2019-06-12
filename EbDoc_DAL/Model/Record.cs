@@ -25,8 +25,8 @@ namespace EbDoc_DAL.Model
         public Record(string module, string service_request, string work_order, string work_order_h7, string application_no)
         {
             long testid;
-
             this.Hansen_Module = module;
+            this.Documents = new List<Document>();
 
             if (module == "SRV_REQ" && long.TryParse(service_request, out testid))
             {
@@ -93,9 +93,6 @@ namespace EbDoc_DAL.Model
                 this.Hansen_Id = "UNKNOWN";
                 this.B1_ALT_ID = "UNKNOWN";
             }
-
-            this.Documents = new List<Document>();
         }
-
     }
 }

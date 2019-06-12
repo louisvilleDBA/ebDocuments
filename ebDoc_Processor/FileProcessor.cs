@@ -20,6 +20,13 @@ namespace EbDoc_Processor
             "WORK ORDER NO	HANSEN 7 WORK ORDER NO	DOCKET NO	GROUP PROJECT NO	GROUP INSPECTION NO	" +
             "INSPECTION NO	UNITID 2	REPOSITORY LOC	PATH	FILE NAME	MIME TYPE";
 
+        const string ALT_HEADER = @"MODULE	PREFIX	MIDDLE	REVISION	TITLE	DATE_EFFECTIVE	" +
+            "DATE_OBSOLETE	STATUS	REMARKS	SYNOPSIS	ACTIVITY CODE	ADDRESS	APPLICATION NO	" +
+            "APPLICATION TYPE	APPROVAL DATE	 ASSET TYPE	EVENT	INITIATED DATE	NOTES	OWNER NAME	" +
+            "PROBLEM	PROJECT NO	SCAN DATE	SERVICE REQUEST NO	SUBMITTAL DATE	TENANT NAME	UNITID	" +
+            "WORK ORDER NO	HANSEN 7 WORK ORDER NO	DOCKET NO	GROUP PROJECT NO	GROUP INSPECTION NO	" +
+            "INSPECTION NO	UNITID 2	REPOSITORY LOC	ORIG PATH	FILE NAME	MIME TYPE	PATH";
+
         const string ARCHIVE_NAME = "ebDOC_{0}.zip";
         const string METADATA_NAME = "ebDOC_{0}.txt";
 
@@ -31,7 +38,7 @@ namespace EbDoc_Processor
 
         public static int loadMetadata(IEbDocContext context, string metadataFilename)
         {
-            IEbDocContext db = context;
+            //IEbDocContext db = context;
             /* validate file is metadata file
              * open file
              * read row into objects
@@ -50,83 +57,20 @@ namespace EbDoc_Processor
                 log.Debug($"open metadata file [{metadataFilename}]");
                 using (StreamReader file = new StreamReader(metadataFilename))
                 {
+                    int counter = 0;
+                    string ln = file.ReadLine();
 
-                    int counter = -1;
-                    string ln;
-                    string[] headerItems = HEADER.Split("\t".ToCharArray());
-                   
-
-                    while ((ln = file.ReadLine()) != null)
+                    if (string.Equals(ln, HEADER))
+                        counter = loadData(context, file, true);
+                    else if (string.Equals(ln, ALT_HEADER))
+                        counter = loadData(context, file, false);
+                    else
                     {
-                        log.Debug($"row [{counter}]:\n{ln}");
-
-                        if (counter == -1 && !string.Equals(ln, HEADER))
-                        {
-                            string errorMessage = $"{metadataFilename} is NOT a metadata file";
-                            log.Error(errorMessage);
-                            throw new FileLoadException(errorMessage);
-                        }
-                        // if the first row is the HEADER then advance counter and continue
-                        if (counter == -1 && string.Equals(ln, HEADER))
-                        {
-                            counter++;
-                            continue;
-                        }
-                        //delimit content by tab into an array of strings
-                        string[] content = ln.Split("\t".ToCharArray());
-                        // if the filename is blank then continue
-                        if (string.IsNullOrWhiteSpace(content.GetValue(Array.IndexOf(headerItems, "FILE NAME")).ToString()))
-                            continue;
-
-                        log.Debug($"load row [{counter}] into row and doc objects");
-                        var row = new Record(
-                            content.GetValue(Array.IndexOf(headerItems, "MODULE")).ToString(),
-                            content.GetValue(Array.IndexOf(headerItems, "SERVICE REQUEST NO")).ToString(),
-                            content.GetValue(Array.IndexOf(headerItems, "WORK ORDER NO")).ToString(),
-                            content.GetValue(Array.IndexOf(headerItems, "HANSEN 7 WORK ORDER NO")).ToString(),
-                            content.GetValue(Array.IndexOf(headerItems, "APPLICATION NO")).ToString()
-                            );
-                        var doc = GetDocument(
-                                content.GetValue(Array.IndexOf(headerItems, "PATH")).ToString(),
-                                content.GetValue(Array.IndexOf(headerItems, "FILE NAME")).ToString()
-                                );
-                        log.Debug($"get record for [{row.B1_ALT_ID}]");
-                        Record record = db.Records
-                                            .Include(r => r.Documents)
-                                            .FirstOrDefault(r => r.B1_ALT_ID == row.B1_ALT_ID & r.Hansen_Module == row.Hansen_Module);
-                        if (record is null)
-                        {
-                            addAccelaData(db, row);
-                            row.Documents.Add(doc);
-                            db.Records.Add(row);
-                            log.Debug($"record [{row.B1_ALT_ID}] not found in database.\n" +
-                                $"\t\tdocument [{row.Documents.Last().File_Name}] added to new record [{row.B1_ALT_ID}]");
-                        }
-
-                        // if the msd path does not exist in the list of documents then add the document
-                        //else if (record.Documents.Select(d => d.MSD_path == doc.MSD_path).Count() > 0)
-                        else if (!record.Documents.Any(d => d.MSD_path == doc.MSD_path))
-                        {
-
-           
-                            record.Documents.Add(doc);
-                            log.Debug($"[{record.B1_ALT_ID}] exists, [{doc.File_Name}] added to list of docuements");
-                        }
-
-                        if (record != null && string.IsNullOrWhiteSpace(record.Group))
-                            addAccelaData(db, record);
-
-                        log.Debug($"saving [{doc.File_Name}] to database");
-                        db.SaveChanges();
-
-                        counter++;
-                        // debug line  - count off every 500 record processed
-                        if (counter > 0 && counter % 500 == 0)
-                            log.Info($"[{counter}] files processed ");
-
+                        string errorMessage = $"{metadataFilename} is NOT a metadata file";
+                        log.Error(errorMessage);
+                        throw new FileLoadException(errorMessage);
                     }
-                    file.Close();
-                    
+
                     log.Info($"MetaFile [{metadataFilename}] has processed [{counter}] files");
 
                     return counter;
@@ -150,8 +94,8 @@ namespace EbDoc_Processor
 
             int max_count = max_file_count + (max_file_count * 3 / 10);
             long max_size = 2000000000; // 2GB
-            List<string> metadata = new List<string>{ARCHIVE_HEADER};
-            
+            List<string> metadata = new List<string> { ARCHIVE_HEADER };
+
 
             // setup archive variables
             string archive_no = GetNextArchiveNo(db);
@@ -237,7 +181,7 @@ namespace EbDoc_Processor
                     Directory.CreateDirectory(repo_target);
                 using (StreamWriter sw = File.CreateText(metadataPath))
                 {
-                    foreach(var row in metadata)
+                    foreach (var row in metadata)
                         sw.WriteLine(row);
                 }
 
@@ -306,7 +250,7 @@ namespace EbDoc_Processor
                         db.SaveChanges();
                         continue;
                     }
-                    
+
                     zipArchive(repo_source, doc, archivePath);
 
                     log.Debug($"add [{doc.File_Path} to metadata file [{metadataPath}]");
@@ -362,7 +306,7 @@ namespace EbDoc_Processor
                 log.Error(message);
                 throw new FileNotFoundException(message);
             }
-                
+
 
             // 2
             // Use 7-zip
@@ -408,12 +352,12 @@ namespace EbDoc_Processor
                 {
                     int i = 0;
                     long size = 0;
-                    foreach(Document doc in docs)
+                    foreach (Document doc in docs)
                     {
                         archive.CreateEntryFromFile(Path.Combine(repo_source, doc.MSD_path), doc.File_Path.Replace(@"\", @"/"));
                         i++;
                         size += doc.File_Size;
-                        
+
 
                         if (i % 100 == 0)
                             log.Info($"[{i}] documents of [{total}] have been archived to [{archivePath}]");
@@ -428,7 +372,7 @@ namespace EbDoc_Processor
             }
         }
 
-        private static void addAccelaData(IEbDocContext context,Record row)
+        private static void addAccelaData(IEbDocContext context, Record row)
         {
             IEbDocContext db = context;
 
@@ -445,44 +389,6 @@ namespace EbDoc_Processor
             }
         }
 
-        private static Document GetDocument(string MSD_Path, string File_Name)
-        {
-            string repo_source = System.Configuration.ConfigurationManager.AppSettings["SourceLocation"];
-
-            if (string.IsNullOrWhiteSpace(MSD_Path))
-                throw new FileLoadException("MSD_Path missing");
-            if (string.IsNullOrWhiteSpace(File_Name))
-                throw new FileLoadException("Document File_Name missing");
-            if (string.IsNullOrWhiteSpace(repo_source))
-                throw new FileLoadException("Source Location not configured.");
-
-            var invalidChars = Path.GetInvalidFileNameChars();
-            var valid_file_name = new string(File_Name.Where(f => !invalidChars.Contains(f)).ToArray());
-
-            Document doc = new Document(repo_source, MSD_Path, valid_file_name);
-
-            if (File.Exists(Path.Combine(repo_source, MSD_Path)))
-            {
-                doc.Is_Missing = false;
-                doc.File_Size = new FileInfo(Path.Combine(repo_source, MSD_Path)).Length;
-            }
-
-            // print out dcoument object
-            log.Debug("\n\tDocument Details:" +
-                $"\n\t File_Repository: [{doc.Source_Repository}]" +
-                $"\n\t MSD_path: [{doc.MSD_path}]" +
-                $"\n\t File_Name: [{doc.File_Name}]" +
-                $"\n\t File_Size: [{doc.File_Size}]" +
-
-                $"\n\t File_Path: [{doc.File_Path}]" +
-                $"\n\t Zip_Path: [{doc.Zip_Path}]" +
-                $"\n\t Zip_Date: [{doc.Zip_Date.ToString()}]" +
-                $"\n\t Metadata_Path: [{doc.Metadata_Path}]"
-                );
-
-            return doc;
-        }
-
         private static string GetNextArchiveNo(IEbDocContext context)
         {
             // assume documents database will be populaed and can be maintained on the context of EF6
@@ -495,7 +401,7 @@ namespace EbDoc_Processor
             try
             {
                 var ArchiveNos =
-                    db.Documents.Where(d=>d.ArchiveNo!= null).Select(d => d.ArchiveNo).Distinct().ToList();
+                    db.Documents.Where(d => d.ArchiveNo != null).Select(d => d.ArchiveNo).Distinct().ToList();
 
                 if (ArchiveNos.FirstOrDefault() is null)
                 {
@@ -514,6 +420,132 @@ namespace EbDoc_Processor
             catch (Exception ex)
             {
                 log.Error($"unable to process GetNextArchiveNo, Error: [{ex}]");
+                throw ex;
+            }
+        }
+
+        private static Document GetDocument(string MSD_Path, string File_Name, bool IsRawData)
+        {
+            // if the data is raw, use the source location, else the alt source 
+            string repo_source = System.Configuration.ConfigurationManager.AppSettings["SourceLocation"];
+            string alt_repo_source = System.Configuration.ConfigurationManager.AppSettings["AltSourceLocation"];
+
+            if (string.IsNullOrWhiteSpace(MSD_Path))
+                throw new FileLoadException("MSD_Path missing");
+            if (string.IsNullOrWhiteSpace(File_Name))
+                throw new FileLoadException("Document File_Name missing");
+            if (string.IsNullOrWhiteSpace(repo_source))
+                throw new FileLoadException("Source Location not configured.");
+
+            var invalidChars = Path.GetInvalidFileNameChars();
+            var valid_file_name = new string(File_Name.Where(f => !invalidChars.Contains(f)).ToArray());
+
+            Document doc = new Document(repo_source, MSD_Path, valid_file_name);
+
+            if (File.Exists(Path.Combine(repo_source, doc.MSD_path)))
+            {
+                doc.Is_Missing = false;
+                doc.File_Size = new FileInfo(Path.Combine(repo_source, doc.MSD_path)).Length;
+            }
+            else if (!IsRawData && File.Exists(Path.Combine(alt_repo_source,doc.File_Name)))
+            {
+                doc.Source_Repository = alt_repo_source;
+                doc.Is_Missing = false;
+                doc.File_Size = new FileInfo(Path.Combine(alt_repo_source, doc.File_Name)).Length;
+            }
+
+
+            // print out dcoument object
+                log.Debug("\n\tDocument Details:" +
+                $"\n\t File_Repository: [{doc.Source_Repository}]" +
+                $"\n\t MSD_path: [{doc.MSD_path}]" +
+                $"\n\t File_Name: [{doc.File_Name}]" +
+                $"\n\t File_Size: [{doc.File_Size}]" +
+
+                $"\n\t File_Path: [{doc.File_Path}]" +
+                $"\n\t Zip_Path: [{doc.Zip_Path}]" +
+                $"\n\t Zip_Date: [{doc.Zip_Date.ToString()}]" +
+                $"\n\t Metadata_Path: [{doc.Metadata_Path}]"
+                );
+
+            return doc;
+        }
+
+        private static int loadData(IEbDocContext context, StreamReader file, bool IsRawData)
+        {
+            IEbDocContext db = context;
+
+            try
+            {
+                int counter = 0;
+                string ln;
+                string[] headerItems = HEADER.Split("\t".ToCharArray());
+
+                int path = Array.IndexOf(headerItems, "PATH");
+
+                while ((ln = file.ReadLine()) != null)
+                {
+                    log.Debug($"row [{counter}]:\n{ln}");
+
+                    //delimit content by tab into an array of strings
+                    string[] content = ln.Split("\t".ToCharArray());
+                    // if the filename is blank then continue
+                    if (string.IsNullOrWhiteSpace(content.GetValue(Array.IndexOf(headerItems, "FILE NAME")).ToString()))
+                        continue;
+
+                    log.Debug($"load row [{counter}] into row and doc objects");
+                    var row = new Record(
+                        content.GetValue(Array.IndexOf(headerItems, "MODULE")).ToString(),
+                        content.GetValue(Array.IndexOf(headerItems, "SERVICE REQUEST NO")).ToString(),
+                        content.GetValue(Array.IndexOf(headerItems, "WORK ORDER NO")).ToString(),
+                        content.GetValue(Array.IndexOf(headerItems, "HANSEN 7 WORK ORDER NO")).ToString(),
+                        content.GetValue(Array.IndexOf(headerItems, "APPLICATION NO")).ToString()
+                        );
+                    var doc = GetDocument(
+                            content.GetValue(Array.IndexOf(headerItems, "PATH")).ToString(),
+                            content.GetValue(Array.IndexOf(headerItems, "FILE NAME")).ToString(),
+                            IsRawData
+                            );
+                    log.Debug($"get record for [{row.B1_ALT_ID}]");
+                    Record record = db.Records
+                                        .Include(r => r.Documents)
+                                        .FirstOrDefault(r => r.B1_ALT_ID == row.B1_ALT_ID & r.Hansen_Module == row.Hansen_Module);
+                    if (record is null)
+                    {
+                        addAccelaData(db, row);
+                        row.Documents.Add(doc);
+                        db.Records.Add(row);
+                        log.Debug($"record [{row.B1_ALT_ID}] not found in database.\n" +
+                            $"\t\tdocument [{row.Documents.Last().File_Name}] added to new record [{row.B1_ALT_ID}]");
+                    }
+
+                    // if the msd path does not exist in the list of documents then add the document
+                    //else if (record.Documents.Select(d => d.MSD_path == doc.MSD_path).Count() > 0)
+                    else if (!record.Documents.Any(d => d.MSD_path == doc.MSD_path))
+                    {
+                        record.Documents.Add(doc);
+                        log.Debug($"[{record.B1_ALT_ID}] exists, [{doc.File_Name}] added to list of docuements");
+                    }
+
+                    if (record != null && string.IsNullOrWhiteSpace(record.Group))
+                        addAccelaData(db, record);
+
+                    log.Debug($"saving [{doc.File_Name}] to database");
+                    db.SaveChanges();
+
+                    counter++;
+                    // debug line  - count off every 500 record processed
+                    if (counter > 0 && counter % 500 == 0)
+                        log.Info($"[{counter}] files processed ");
+
+                }
+                file.Close();
+
+                return counter;
+            }
+            catch (Exception ex)
+            {
+                log.Error($"ERROR Found: {ex.Message}");
                 throw ex;
             }
         }

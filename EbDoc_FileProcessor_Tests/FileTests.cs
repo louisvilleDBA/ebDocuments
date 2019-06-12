@@ -98,7 +98,7 @@ namespace EbDoc_FileProcessor_Tests
             string expected_module = "TRADE_APP";  // "CDR_TRADELICENSE";
             string expected_file_name = "13GTD1000 NEW TEMP 2013.PDF";
             //ACTION - 1 setupdata
-            int result = FileProcessor.loadMetadata(mockDB_Context, metadataFilePath );
+            int result = FileProcessor.loadMetadata(mockDB_Context, metadataFilePath);
 
             string result_module = mockDB_Context.Records.First().Hansen_Module;
             string result_file_name = mockDB_Context.Records.Single(r => r.B1_ALT_ID == "13GTD1000-TRD").Documents.Single(d => d.MSD_path == @"00\00\20\1078703").File_Name;

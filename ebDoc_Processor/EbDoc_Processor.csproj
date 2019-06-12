@@ -65,13 +65,5 @@
       <Name>EbDoc_DAL</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Content Include="7zip\7zr.exe">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="7zip\lzma.exe">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
