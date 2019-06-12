@@ -1,5 +1,6 @@
 ﻿using EbDoc_DAL;
 using EbDoc_Processor;
+using System.Configuration;
 using System.IO;
 
 namespace EbDoc_Metadata_Loader
@@ -37,25 +38,16 @@ namespace EbDoc_Metadata_Loader
                 string errorMessage = $"metadata file [{metadataFilename}] not found!";
                 throw new FileNotFoundException(errorMessage);
             }
+            string[] source_repo = new string[] 
+            {
+                ConfigurationManager.AppSettings["SourceLocation"],
+                ConfigurationManager.AppSettings["AltSourceLocation"]
+            };
 
-            long result = FileProcessor.loadMetadata(new EbDocContext(), metadataFilename);
+            long result = FileProcessor.loadMetadata(new EbDocContext(), metadataFilename, source_repo);
             System.Console.WriteLine($"[{metadataFilename}] contains [{result}] files");
         }
-        //internal static void getData(string metadataFilename, string repo_source)
-        //{
-        //    if (!File.Exists(metadataFilename))
-        //    {
-        //        string errorMessage = $"metadata file [{metadataFilename}] not found!";
-        //        throw new FileNotFoundException(errorMessage);
-        //    }
-        //    if (!Directory.Exists(repo_source))
-        //    {
-        //        string errorMessage = $"source repository [{repo_source}] not found!";
-        //        throw new DirectoryNotFoundException(errorMessage);
-        //    }
 
-        //    long result = FileProcessor.loadMetadata(new EbDocContext(), metadataFilename, repo_source);
-        //    System.Console.WriteLine($"[{metadataFilename}] contains [{result}] files");
-        //}
+
     }
 }

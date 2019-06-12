@@ -32,11 +32,15 @@ namespace EbDoc_Processor
 
         const string ARCHIVE_HEADER = "HANSEN_MODULE\tHANSEN_ID\tB1_ALT_ID\tFILE_NAME\tFILE_PATH\tFILE_SIZE";
 
+        const long MAX_FILE_SIZE = 2000000000; // 2GB
+
+        private static string repo_source { get; set; }
+        private static string alt_repo_source { get; set; }
 
         private static readonly log4net.ILog log =
             log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-        public static int loadMetadata(IEbDocContext context, string metadataFilename)
+        public static int loadMetadata(IEbDocContext context, string metadataFilename, string[] source_repo)
         {
             //IEbDocContext db = context;
             /* validate file is metadata file
@@ -51,6 +55,23 @@ namespace EbDoc_Processor
                 log.Error(errorMessage);
                 throw new FileNotFoundException(errorMessage);
             }
+            if (string.IsNullOrWhiteSpace(source_repo[0]))
+            {
+                string message = "missing repo_source";
+                log.Error(message);
+                throw new ArgumentException(message);
+            }
+            else
+                repo_source = source_repo[0];
+
+            if (string.IsNullOrWhiteSpace(source_repo[1]))
+            {
+                string message = "missing alt_repo_source";
+                log.Error(message);
+                throw new ArgumentException(message);
+            }
+            else
+                alt_repo_source = source_repo[1];
 
             try
             {
@@ -84,18 +105,15 @@ namespace EbDoc_Processor
 
         }
 
-        public static int createArchive2(IEbDocContext context, string repo_source, string repo_target, int max_file_count)
+        public static int createArchive(IEbDocContext context, string repo_source, string repo_target, int max_file_count)
         {
             IEbDocContext db = context;
 
             log.Info("begin createArchive process");
             int files_archived = 0;
             long size = 0;
-
             int max_count = max_file_count + (max_file_count * 3 / 10);
-            long max_size = 2000000000; // 2GB
             List<string> metadata = new List<string> { ARCHIVE_HEADER };
-
 
             // setup archive variables
             string archive_no = GetNextArchiveNo(db);
@@ -107,23 +125,16 @@ namespace EbDoc_Processor
                 $"\nmetadataPath\t[{metadataPath}]"
                 );
 
+            /*
+            * tag files with archive no. (max files plus 30%)
+            * pull records with docs that have archive no, docs that will migrate ( is not to large and has record in accela)
+            * build manifest in memory
+            * archive files on mainfest
+            * write manifest to file
+            */
 
             try
             {
-
-
-                // tag files with archive no. (max files plus 30%)
-
-                // pull records with docs that have archive no, docs that will migrate ( is not to large and has record in accela)
-
-                // pull 500 records and documents.
-
-                // build manifest in memory
-
-                // archive files on mainfest
-
-                // write manifest to file
-
                 var docs = db.Documents
                             .Where(d => d.ArchiveNo == null && d.File_Size < 5000000 && !d.Is_Missing)
                             .Take(max_count).ToList();
@@ -140,7 +151,7 @@ namespace EbDoc_Processor
                     log.Debug($"file is [{doc.File_Path}]");
 
                     // stop if we reach max file count
-                    if (files_archived == max_file_count || size > max_size)
+                    if (files_archived == max_file_count || size > MAX_FILE_SIZE)
                         break;
 
                     // mark document with archive_no to identify data as processed.
@@ -164,7 +175,7 @@ namespace EbDoc_Processor
                     doc.Metadata_Path = metadataPath;
 
                     //  "HANSEN_MODULE\tHANSEN_ID\tB1_ALT_ID\tFILE_NAME\tFILE_PATH\tFILE_SIZE";
-                    metadata.Add($"{rec.Hansen_Module}\t{rec.Hansen_Id}\t{rec.B1_ALT_ID}\t{doc.File_Name}\t{doc.File_Path}\t{doc.File_Size}");
+                    metadata.Add($"{rec.Hansen_Module}\t{rec.Hansen_Id}\t{rec.B1_ALT_ID}\t{doc.File_Name}\tebDOC_{doc.ArchiveNo}\\{doc.File_Path}\t{doc.File_Size}");
 
                     files_archived++;
                     size += doc.File_Size;
@@ -198,197 +209,7 @@ namespace EbDoc_Processor
             return files_archived;
         }
 
-        public static int createArchive(IEbDocContext context, string repo_source, string repo_target, int max_file_count)
-        {
-            IEbDocContext db = context;
-
-            log.Info("begin createArchive process");
-            int files_archived = 0;
-
-            try
-            {
-                var docs = db.Documents
-                            .Where(d => d.ArchiveNo == null && d.File_Size < 5000000 && !d.Is_Missing)
-                            .Take(max_file_count).ToList();
-
-                if (docs.Count() < 1)
-                {
-                    log.Info("no records available to process");
-                    return files_archived;
-                }
-
-                string archive_no = GetNextArchiveNo(db);
-                string archivePath = Path.Combine(repo_target, string.Format(ARCHIVE_NAME, archive_no));
-                string metadataPath = Path.Combine(repo_target, string.Format(METADATA_NAME, archive_no));
-
-                log.Debug($"variables set\narchive_no:\t[{archive_no}" +
-                    $"\narchivePath:\t[{archivePath}]" +
-                    $"\nmetadataPath\t[{metadataPath}]"
-                    );
-                if (!Directory.Exists(repo_target))
-                    Directory.CreateDirectory(repo_target);
-
-                log.Debug("create the metadata file");
-                using (StreamWriter sw = File.CreateText(metadataPath))
-                {
-                    sw.WriteLine(ARCHIVE_HEADER);
-                }
-
-                log.Debug("iterate through the docuemnts");
-                foreach (var doc in docs)
-                {
-                    log.Debug($"file is [{doc.File_Path}]");
-
-                    var data = db;
-
-                    var rec = data.Records.SingleOrDefault(r => r.RecordId == doc.RecordId && r.Group != null);
-                    if (rec is null)
-                    {
-                        // mark document with archive_no to identify data as processed.
-                        log.Debug($"[{doc.File_Path}] does not have a corresponding record in accela");
-                        doc.ArchiveNo = archive_no;
-                        db.SaveChanges();
-                        continue;
-                    }
-
-                    zipArchive(repo_source, doc, archivePath);
-
-                    log.Debug($"add [{doc.File_Path} to metadata file [{metadataPath}]");
-                    using (StreamWriter sw = File.AppendText(metadataPath))
-                    {
-                        //  "HANSEN_MODULE\tHANSEN_ID\tB1_ALT_ID\tFILE_NAME\tFILE_PATH\tFILE_SIZE";
-                        string metadata = $"{rec.Hansen_Module}\t{rec.Hansen_Id}\t{rec.B1_ALT_ID}\t{doc.File_Name}\t{doc.File_Path}\t{doc.File_Size}";
-                        sw.WriteLine(metadata);
-                    }
-
-                    log.Debug("update document data");
-                    doc.Target_Repository = repo_target;
-                    doc.Zip_Date = DateTime.Now;
-                    doc.Zip_Path = archivePath;
-                    doc.ArchiveNo = archive_no;
-                    doc.Metadata_Path = metadataPath;
-
-                    db.SaveChanges();
-                    files_archived++;
-
-                    // debug line  - count off every 500 record processed
-                    if (files_archived % 100 == 0)
-                        log.Info($"[{files_archived}] files processed ");
-
-                }
-                log.Info($"[{archivePath}] contains [{files_archived}] files of [{max_file_count}] requested.");
-
-            }
-            catch (Exception ex)
-            {
-                log.Error($"Epic failure: {ex}");
-                throw ex;
-            }
-            return files_archived;
-        }
-
-        public static void archive7zip(string sourceName, string archiveName)
-        {
-
-            log.Debug("begin 7-zip archive");
-            string programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-
-            // 1
-            // Initialize process information.
-            //
-            var startInfo = new System.Diagnostics.ProcessStartInfo();
-            startInfo.FileName = $@"{programFiles}\7-Zip\7z.exe";
-
-
-            if (!File.Exists(startInfo.FileName))
-            {
-                string message = "unable to locate x64 7z.exe";
-                log.Error(message);
-                throw new FileNotFoundException(message);
-            }
-
-
-            // 2
-            // Use 7-zip
-            // specify a=archive and -tgzip=gzip
-            // and then target file in quotes followed by source file in quotes
-            //
-            startInfo.Arguments = $"a -tzip \"{archiveName}\" \"{sourceName}\"  -mx=9";
-            log.Debug($"args: [{startInfo.Arguments}]");
-
-            startInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-
-
-            // 3.
-            // Start process and wait for it to exit
-            //
-            var process = System.Diagnostics.Process.Start(startInfo);
-            process.WaitForExit();
-
-        }
-
-        private static void zipArchive(string repo_source, Document doc, string archivePath)
-        {
-            using (ZipArchive archive = ZipFile.Open(archivePath, ZipArchiveMode.Update))
-            {
-                //archive.CreateEntryFromFile(Path.Combine(repo_source, doc.MSD_path), doc.File_Path);
-                archive.CreateEntryFromFile(Path.Combine(repo_source, doc.MSD_path), doc.File_Path.Replace(@"\", @"/"));
-            }
-
-            log.Debug($"added entry [{doc.File_Path}] into archive file [{archivePath}]");
-        }
-
-        private static void zipArchive(IEbDocContext context, string archive_no, string repo_source, string archivePath)
-        {
-            IEbDocContext db = context;
-            try
-            {
-                var docs = db.Documents.Where(d => d.ArchiveNo == archive_no & d.Zip_Date != null);
-                int total = docs.Count();
-                log.Info($"[{total}] documents are ready to be archived.");
-
-
-                using (ZipArchive archive = ZipFile.Open(archivePath, ZipArchiveMode.Update))
-                {
-                    int i = 0;
-                    long size = 0;
-                    foreach (Document doc in docs)
-                    {
-                        archive.CreateEntryFromFile(Path.Combine(repo_source, doc.MSD_path), doc.File_Path.Replace(@"\", @"/"));
-                        i++;
-                        size += doc.File_Size;
-
-
-                        if (i % 100 == 0)
-                            log.Info($"[{i}] documents of [{total}] have been archived to [{archivePath}]");
-                    }
-                    log.Info($"[{i}] documents have been archived to [{archivePath}]");
-                }
-            }
-            catch (Exception ex)
-            {
-                log.Error($"zipArchive failure: {ex}");
-                throw ex;
-            }
-        }
-
-        private static void addAccelaData(IEbDocContext context, Record row)
-        {
-            IEbDocContext db = context;
-
-            log.Debug($"begin load record [{row.B1_ALT_ID}] with accela data");
-
-            var accela_id = db.ACCELA_IDs.FirstOrDefault(a => a.B1_ALT_ID == row.B1_ALT_ID);
-            if (accela_id != null)
-            {
-                row.Group = accela_id.B1_PER_GROUP;
-                row.Type = accela_id.B1_PER_TYPE;
-                row.Subtype = accela_id.B1_PER_SUB_TYPE;
-                row.Category = accela_id.B1_PER_CATEGORY;
-                row.Is_Closed = accela_id.IS_CLOSED;
-            }
-        }
-
+        #region private archive processes
         private static string GetNextArchiveNo(IEbDocContext context)
         {
             // assume documents database will be populaed and can be maintained on the context of EF6
@@ -424,12 +245,61 @@ namespace EbDoc_Processor
             }
         }
 
+        private static void zipArchive(IEbDocContext context, string archive_no, string repo_source, string archivePath)
+        {
+            IEbDocContext db = context;
+            try
+            {
+                var docs = db.Documents.Where(d => d.ArchiveNo == archive_no & d.Zip_Date != null);
+                int total = docs.Count();
+                log.Info($"[{total}] documents are ready to be archived.");
+
+                using (ZipArchive archive = ZipFile.Open(archivePath, ZipArchiveMode.Update))
+                {
+                    int i = 0;
+                    long size = 0;
+                    foreach (Document doc in docs)
+                    {
+                        archive.CreateEntryFromFile(Path.Combine(repo_source, doc.MSD_path), doc.File_Path.Replace(@"\", @"/"));
+                        i++;
+                        size += doc.File_Size;
+
+                        if (i % 100 == 0)
+                            log.Info($"[{i}] documents of [{total}] have been archived to [{archivePath}]");
+                    }
+                    log.Info($"[{i}] documents have been archived to [{archivePath}]");
+                }
+            }
+            catch (Exception ex)
+            {
+                log.Error($"zipArchive failure: {ex}");
+                throw ex;
+            }
+        }
+        #endregion
+
+        #region private metadata loader processes
+
+        private static void addAccelaData(IEbDocContext context, Record row)
+        {
+            IEbDocContext db = context;
+
+            log.Debug($"begin load record [{row.B1_ALT_ID}] with accela data");
+
+            var accela_id = db.ACCELA_IDs.FirstOrDefault(a => a.B1_ALT_ID == row.B1_ALT_ID);
+            if (accela_id != null)
+            {
+                row.Group = accela_id.B1_PER_GROUP;
+                row.Type = accela_id.B1_PER_TYPE;
+                row.Subtype = accela_id.B1_PER_SUB_TYPE;
+                row.Category = accela_id.B1_PER_CATEGORY;
+                row.Is_Closed = accela_id.IS_CLOSED;
+            }
+        }
+
         private static Document GetDocument(string MSD_Path, string File_Name, bool IsRawData)
         {
             // if the data is raw, use the source location, else the alt source 
-            string repo_source = System.Configuration.ConfigurationManager.AppSettings["SourceLocation"];
-            string alt_repo_source = System.Configuration.ConfigurationManager.AppSettings["AltSourceLocation"];
-
             if (string.IsNullOrWhiteSpace(MSD_Path))
                 throw new FileLoadException("MSD_Path missing");
             if (string.IsNullOrWhiteSpace(File_Name))
@@ -445,13 +315,13 @@ namespace EbDoc_Processor
             if (File.Exists(Path.Combine(repo_source, doc.MSD_path)))
             {
                 doc.Is_Missing = false;
-                doc.File_Size = new FileInfo(Path.Combine(repo_source, doc.MSD_path)).Length;
+                doc.File_Size = new FileInfo(Path.Combine(doc.Source_Repository, doc.MSD_path)).Length;
             }
             else if (!IsRawData && File.Exists(Path.Combine(alt_repo_source,doc.File_Name)))
             {
                 doc.Source_Repository = alt_repo_source;
                 doc.Is_Missing = false;
-                doc.File_Size = new FileInfo(Path.Combine(alt_repo_source, doc.File_Name)).Length;
+                doc.File_Size = new FileInfo(Path.Combine(doc.Source_Repository, doc.File_Name)).Length;
             }
 
 
@@ -549,7 +419,7 @@ namespace EbDoc_Processor
                 throw ex;
             }
         }
-
+        #endregion
     }
 
 
