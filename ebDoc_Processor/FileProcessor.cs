@@ -167,13 +167,14 @@ namespace EbDoc_Processor
                         continue;
                     }
 
-                    log.Debug("update document data");
+                    log.Debug($"update document data for DocumentId [{doc.DocumentId}]");
                     doc.Target_Repository = repo_target;
                     doc.Zip_Date = DateTime.Now;
                     doc.Zip_Path = archivePath;
                     doc.ArchiveNo = archive_no;
                     doc.Metadata_Path = metadataPath;
 
+                    log.Debug($"add row to metadata for DocumentId [{doc.DocumentId}]");
                     //  "HANSEN_MODULE\tHANSEN_ID\tB1_ALT_ID\tFILE_NAME\tFILE_PATH\tFILE_SIZE";
                     metadata.Add($"{rec.Hansen_Module}\t{rec.Hansen_Id}\t{rec.B1_ALT_ID}\t{doc.File_Name}\tebDOC_{doc.ArchiveNo}\\{doc.File_Path}\t{doc.File_Size}");
 
@@ -181,13 +182,13 @@ namespace EbDoc_Processor
                     size += doc.File_Size;
 
                     // debug line  - count off every 500 record processed
-                    if (files_archived % 100 == 0)
+                    if (files_archived % 500 == 0)
                         log.Info($"[{files_archived}] files processed ");
                 }
 
                 db.SaveChanges();
 
-                log.Debug("create the metadata file");
+                log.Debug($"create the metadata file [{metadataPath}]");
                 if (!Directory.Exists(repo_target))
                     Directory.CreateDirectory(repo_target);
                 using (StreamWriter sw = File.CreateText(metadataPath))
@@ -196,7 +197,7 @@ namespace EbDoc_Processor
                         sw.WriteLine(row);
                 }
 
-                log.Debug("create zip file");
+                log.Debug($"create zip file [{archivePath}]");
                 zipArchive(db, archive_no, repo_source, archivePath);
 
                 log.Info($"----- archive [{archive_no}] complete -----");
@@ -316,12 +317,19 @@ namespace EbDoc_Processor
             {
                 doc.Is_Missing = false;
                 doc.File_Size = new FileInfo(Path.Combine(doc.Source_Repository, doc.MSD_path)).Length;
+                log.Debug($"source file:  [{Path.Combine(doc.Source_Repository, doc.MSD_path)}] exists");
             }
-            else if (!IsRawData && File.Exists(Path.Combine(alt_repo_source,doc.File_Name)))
+            else if (!IsRawData && File.Exists(Path.Combine(alt_repo_source,doc.File_Path)))
             {
                 doc.Source_Repository = alt_repo_source;
                 doc.Is_Missing = false;
-                doc.File_Size = new FileInfo(Path.Combine(doc.Source_Repository, doc.File_Name)).Length;
+                doc.File_Size = new FileInfo(Path.Combine(doc.Source_Repository, doc.File_Path)).Length;
+                log.Debug($"source file: [{Path.Combine(doc.Source_Repository, doc.File_Path)}] exists ");
+            }
+            else
+            {
+                log.Debug($"source file for [{doc.File_Name}] does not exist");
+                doc.Source_Repository = string.Empty;
             }
 
 
@@ -347,6 +355,7 @@ namespace EbDoc_Processor
 
             try
             {
+                int row_counter = 0;
                 int counter = 0;
                 string ln;
                 string[] headerItems = HEADER.Split("\t".ToCharArray());
@@ -355,15 +364,29 @@ namespace EbDoc_Processor
 
                 while ((ln = file.ReadLine()) != null)
                 {
-                    log.Debug($"row [{counter}]:\n{ln}");
+                    log.Debug($"processing row [{row_counter}]: [{ln}]");
 
                     //delimit content by tab into an array of strings
                     string[] content = ln.Split("\t".ToCharArray());
-                    // if the filename is blank then continue
-                    if (string.IsNullOrWhiteSpace(content.GetValue(Array.IndexOf(headerItems, "FILE NAME")).ToString()))
-                        continue;
 
-                    log.Debug($"load row [{counter}] into row and doc objects");
+                    string file_name = content.GetValue(Array.IndexOf(headerItems, "FILE NAME")).ToString();
+                    string msd_path = content.GetValue(Array.IndexOf(headerItems, "PATH")).ToString();
+                     // if the filename is blank then continue
+                    if (string.IsNullOrWhiteSpace(file_name))
+                    {
+                        log.Debug($"file row [{row_counter}] in metadata file does not have a file name");
+                        row_counter++;
+                        continue;
+                    }
+                    // if the document already esixts in the database then continue
+                    if (db.Documents.Any(d => d.MSD_path == msd_path))
+                    {
+                        log.Info($"document [{msd_path}] already exists in database");
+                        row_counter++;
+                        continue;
+                    }
+
+                    log.Debug($"load row [{row_counter}] into row and doc objects");
                     var row = new Record(
                         content.GetValue(Array.IndexOf(headerItems, "MODULE")).ToString(),
                         content.GetValue(Array.IndexOf(headerItems, "SERVICE REQUEST NO")).ToString(),
@@ -371,11 +394,8 @@ namespace EbDoc_Processor
                         content.GetValue(Array.IndexOf(headerItems, "HANSEN 7 WORK ORDER NO")).ToString(),
                         content.GetValue(Array.IndexOf(headerItems, "APPLICATION NO")).ToString()
                         );
-                    var doc = GetDocument(
-                            content.GetValue(Array.IndexOf(headerItems, "PATH")).ToString(),
-                            content.GetValue(Array.IndexOf(headerItems, "FILE NAME")).ToString(),
-                            IsRawData
-                            );
+                    var doc = GetDocument(msd_path, file_name, IsRawData);
+
                     log.Debug($"get record for [{row.B1_ALT_ID}]");
                     Record record = db.Records
                                         .Include(r => r.Documents)
@@ -390,11 +410,10 @@ namespace EbDoc_Processor
                     }
 
                     // if the msd path does not exist in the list of documents then add the document
-                    //else if (record.Documents.Select(d => d.MSD_path == doc.MSD_path).Count() > 0)
                     else if (!record.Documents.Any(d => d.MSD_path == doc.MSD_path))
                     {
                         record.Documents.Add(doc);
-                        log.Debug($"[{record.B1_ALT_ID}] exists, [{doc.File_Name}] added to list of docuements");
+                        log.Debug($"[{record.B1_ALT_ID}] exists, [{doc.File_Name}] added to list of documents");
                     }
 
                     if (record != null && string.IsNullOrWhiteSpace(record.Group))
@@ -403,11 +422,11 @@ namespace EbDoc_Processor
                     log.Debug($"saving [{doc.File_Name}] to database");
                     db.SaveChanges();
 
+                    row_counter++;
                     counter++;
                     // debug line  - count off every 500 record processed
-                    if (counter > 0 && counter % 500 == 0)
-                        log.Info($"[{counter}] files processed ");
-
+                    if (row_counter > 0 && row_counter % 500 == 0)
+                        log.Info($"processed [{counter}] files of [{row_counter}] rows in metadata");
                 }
                 file.Close();
 

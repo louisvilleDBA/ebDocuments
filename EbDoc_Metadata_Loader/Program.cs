@@ -10,23 +10,17 @@ namespace EbDoc_Metadata_Loader
         public static void Main(string[] args)
         {
             string metadataFilename;
-            string repo_source;
 
-            if (args.Length < 2)
+            if (args.Length == 0)
             {
                 metadataFilename = @"Y:\metadata\xaa.txt";
-                repo_source = @"C:\Blah";
             }
             else
             {
                 metadataFilename = args[0];
-                repo_source = args[1];
             }
 
             getData(metadataFilename);
-
-            //getData(metadataFilename, repo_source);
-
 
             System.Console.WriteLine("\npress any key to coninue");
             System.Console.ReadKey();
