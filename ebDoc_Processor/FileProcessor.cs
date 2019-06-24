@@ -163,7 +163,7 @@ namespace EbDoc_Processor
                     if (rec is null)
                     {
                         // if record does not migrate, continue
-                        log.Debug($"[{doc.File_Path}] does not have a corresponding record in accela");
+                        log.Info($"[{doc.File_Path}] does not have a corresponding record in accela");
                         continue;
                     }
 
