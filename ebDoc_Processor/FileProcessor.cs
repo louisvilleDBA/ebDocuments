@@ -32,7 +32,7 @@ namespace EbDoc_Processor
 
         const string ARCHIVE_HEADER = "HANSEN_MODULE\tHANSEN_ID\tB1_ALT_ID\tFILE_NAME\tFILE_PATH\tFILE_SIZE";
 
-        const long MAX_FILE_SIZE = 2000000000; // 2GB
+        const long MAX_FILE_SIZE = 1900000000; // 2GB
 
         private static string repo_source { get; set; }
         private static string alt_repo_source { get; set; }
@@ -105,14 +105,13 @@ namespace EbDoc_Processor
 
         }
 
-        public static int createArchive(IEbDocContext context, string repo_source, string repo_target, int max_file_count)
+        public static int createArchive(IEbDocContext context, string repo_target, int max_file_count)
         {
             IEbDocContext db = context;
 
             log.Info("begin createArchive process");
             int files_archived = 0;
             long size = 0;
-            int max_count = max_file_count + (max_file_count * 3 / 10);
             List<string> metadata = new List<string> { ARCHIVE_HEADER };
 
             // setup archive variables
@@ -136,8 +135,8 @@ namespace EbDoc_Processor
             try
             {
                 var docs = db.Documents
-                            .Where(d => d.ArchiveNo == null && d.File_Size < 5000000 && !d.Is_Missing)
-                            .Take(max_count).ToList();
+                            .Where(d => d.ArchiveNo == null && d.File_Size < 5000000 && !d.Is_Missing && d.Has_Record)
+                            .Take(max_file_count).ToList();
 
                 if (docs.Count() < 1)
                 {
@@ -150,7 +149,8 @@ namespace EbDoc_Processor
                 {
                     log.Debug($"file is [{doc.File_Path}]");
 
-                    // stop if we reach max file count
+                    // stop if we reach max file count or exceed max file size
+                    size += doc.File_Size;
                     if (files_archived == max_file_count || size > MAX_FILE_SIZE)
                         break;
 
@@ -158,7 +158,6 @@ namespace EbDoc_Processor
                     doc.ArchiveNo = archive_no;
 
                     var data = db;
-
                     var rec = data.Records.SingleOrDefault(r => r.RecordId == doc.RecordId && r.Group != null);
                     if (rec is null)
                     {
@@ -179,9 +178,7 @@ namespace EbDoc_Processor
                     metadata.Add($"{rec.Hansen_Module}\t{rec.Hansen_Id}\t{rec.B1_ALT_ID}\t{doc.File_Name}\tebDOC_{doc.ArchiveNo}\\{doc.File_Path}\t{doc.File_Size}");
 
                     files_archived++;
-                    size += doc.File_Size;
-
-                    // debug line  - count off every 500 record processed
+                    // count off every 500 record processed
                     if (files_archived % 500 == 0)
                         log.Info($"[{files_archived}] files processed ");
                 }
@@ -198,13 +195,14 @@ namespace EbDoc_Processor
                 }
 
                 log.Debug($"create zip file [{archivePath}]");
-                zipArchive(db, archive_no, repo_source, archivePath);
+                //zipArchive(db, archive_no, repo_source, archivePath);
+                zipArchive(db, archive_no, archivePath);
 
                 log.Info($"----- archive [{archive_no}] complete -----");
             }
             catch (Exception ex)
             {
-                log.Error($"createArchive2 failure: {ex}");
+                log.Error($"createArchive failure: {ex}");
                 throw ex;
             }
             return files_archived;
@@ -246,25 +244,24 @@ namespace EbDoc_Processor
             }
         }
 
-        private static void zipArchive(IEbDocContext context, string archive_no, string repo_source, string archivePath)
+        //private static void zipArchive(IEbDocContext context, string archive_no, string repo_source, string archivePath)
+        private static void zipArchive(IEbDocContext context, string archive_no, string archivePath)
         {
             IEbDocContext db = context;
             try
             {
                 var docs = db.Documents.Where(d => d.ArchiveNo == archive_no & d.Zip_Date != null);
                 int total = docs.Count();
-                log.Info($"[{total}] documents are ready to be archived.");
+                log.Info($"[{total}] documents to be sent to archive [{archivePath}]");
 
-                using (ZipArchive archive = ZipFile.Open(archivePath, ZipArchiveMode.Update))
+                //using (ZipArchive archive = ZipFile.Open(archivePath, ZipArchiveMode.Update))
+                using (ZipArchive archive = ZipFile.Open(archivePath, ZipArchiveMode.Create))
                 {
                     int i = 0;
-                    long size = 0;
                     foreach (Document doc in docs)
                     {
-                        archive.CreateEntryFromFile(Path.Combine(repo_source, doc.MSD_path), doc.File_Path.Replace(@"\", @"/"));
+                        archive.CreateEntryFromFile(Path.Combine(doc.Source_Repository, doc.MSD_path), doc.File_Path.Replace(@"\", @"/"));
                         i++;
-                        size += doc.File_Size;
-
                         if (i % 100 == 0)
                             log.Info($"[{i}] documents of [{total}] have been archived to [{archivePath}]");
                     }
@@ -281,8 +278,9 @@ namespace EbDoc_Processor
 
         #region private metadata loader processes
 
-        private static void addAccelaData(IEbDocContext context, Record row)
+        private static bool addAccelaData(IEbDocContext context, Record row)
         {
+            bool ret_val = false;
             IEbDocContext db = context;
 
             log.Debug($"begin load record [{row.B1_ALT_ID}] with accela data");
@@ -295,7 +293,10 @@ namespace EbDoc_Processor
                 row.Subtype = accela_id.B1_PER_SUB_TYPE;
                 row.Category = accela_id.B1_PER_CATEGORY;
                 row.Is_Closed = accela_id.IS_CLOSED;
+                ret_val = true;
             }
+
+            return ret_val;
         }
 
         private static Document GetDocument(string MSD_Path, string File_Name, bool IsRawData)
@@ -402,7 +403,7 @@ namespace EbDoc_Processor
                                         .FirstOrDefault(r => r.B1_ALT_ID == row.B1_ALT_ID & r.Hansen_Module == row.Hansen_Module);
                     if (record is null)
                     {
-                        addAccelaData(db, row);
+                        doc.Has_Record = addAccelaData(db, row);
                         row.Documents.Add(doc);
                         db.Records.Add(row);
                         log.Debug($"record [{row.B1_ALT_ID}] not found in database.\n" +
@@ -412,12 +413,13 @@ namespace EbDoc_Processor
                     // if the msd path does not exist in the list of documents then add the document
                     else if (!record.Documents.Any(d => d.MSD_path == doc.MSD_path))
                     {
+                        doc.Has_Record = addAccelaData(db, record);
                         record.Documents.Add(doc);
                         log.Debug($"[{record.B1_ALT_ID}] exists, [{doc.File_Name}] added to list of documents");
                     }
-
-                    if (record != null && string.IsNullOrWhiteSpace(record.Group))
-                        addAccelaData(db, record);
+                    else
+                        log.Info($"[{record.B1_ALT_ID}] exists, [{doc.File_Name}] already added... Nothing Updated");
+                 
 
                     log.Debug($"saving [{doc.File_Name}] to database");
                     db.SaveChanges();

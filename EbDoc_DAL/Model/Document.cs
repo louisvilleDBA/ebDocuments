@@ -16,6 +16,7 @@ namespace EbDoc_DAL.Model
         [Required]
         public string File_Name { get; set; }
         public bool Is_Missing { get; set; }
+        public bool Has_Record { get; set; } 
         public long File_Size { get; set; }
         public bool Is_Large
         { // this is an internal function
@@ -44,7 +45,8 @@ namespace EbDoc_DAL.Model
             Source_Repository = repo_source;
             MSD_path = msd_path;
             File_Name = filename;
-            File_Path = Path.Combine(Path.GetDirectoryName(msd_path), filename);
+            //File_Path = Path.Combine(Path.GetDirectoryName(msd_path), filename);
+            File_Path = $"{msd_path}_{filename}";
             Is_Missing = true;
         }
     }

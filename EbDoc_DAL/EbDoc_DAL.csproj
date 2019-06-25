@@ -64,6 +64,10 @@
     <Compile Include="Migrations\201905291312403_changes to accela data.Designer.cs">
       <DependentUpon>201905291312403_changes to accela data.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\201906241306474_add_has_record.cs" />
+    <Compile Include="Migrations\201906241306474_add_has_record.Designer.cs">
+      <DependentUpon>201906241306474_add_has_record.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Model\ACCELA_ID.cs" />
     <Compile Include="Model\Document.cs" />
@@ -92,6 +96,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\201905291312403_changes to accela data.resx">
       <DependentUpon>201905291312403_changes to accela data.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\201906241306474_add_has_record.resx">
+      <DependentUpon>201906241306474_add_has_record.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
