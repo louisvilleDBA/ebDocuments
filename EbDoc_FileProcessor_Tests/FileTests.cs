@@ -131,7 +131,7 @@ namespace EbDoc_FileProcessor_Tests
 
 
             //action - 2 - run archive
-            int result_files_archived = FileProcessor.createArchive(mockDB_Context, local_folder, expected_dir, 2);
+            int result_files_archived = FileProcessor.createArchive(mockDB_Context, expected_dir, 2);
 
             //ASSERT
             Assert.AreEqual(expected_files_archived, result_files_archived);
@@ -161,25 +161,25 @@ namespace EbDoc_FileProcessor_Tests
             string testDoc = testFolder + "TextFile1.txt";
 
             Record rec1 = new Record("TRADE_APP", null, null, null, "00TEST1234");
-            rec1.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file0.txt", File_Path= testFolder + "my_test_file0.txt", ArchiveNo = "00001" });
-            rec1.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file1.txt", File_Path = testFolder + "my_test_file1.txt", ArchiveNo = "00001" });
-            rec1.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file2.txt", File_Path = testFolder + "my_test_file2.txt", ArchiveNo = "00002" });
-            rec1.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file3.txt", File_Path = testFolder + "my_test_file3.txt" });
-            rec1.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file4.txt", File_Path = testFolder + "my_test_file4.txt" });
+            rec1.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file0.txt", File_Path= testFolder + "my_test_file0.txt", ArchiveNo = "00001" });
+            rec1.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file1.txt", File_Path = testFolder + "my_test_file1.txt", ArchiveNo = "00001" });
+            rec1.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file2.txt", File_Path = testFolder + "my_test_file2.txt", ArchiveNo = "00002" });
+            rec1.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file3.txt", File_Path = testFolder + "my_test_file3.txt" });
+            rec1.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file4.txt", File_Path = testFolder + "my_test_file4.txt" });
 
             Record rec2 = new Record("TRADE_APP", null, null, null, "200TEST1234");
-            rec2.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file20.txt", File_Path = testFolder + "my_test_file20.txt" });
-            rec2.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file21.txt", File_Path = testFolder + "my_test_file21.txt" });
-            rec2.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file22.txt", File_Path = testFolder + "my_test_file22.txt" });
-            rec2.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file23.txt", File_Path = testFolder + "my_test_file23.txt" });
-            rec2.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file24.txt", File_Path = testFolder + "my_test_file24.txt" });
+            rec2.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file20.txt", File_Path = testFolder + "my_test_file20.txt" });
+            rec2.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file21.txt", File_Path = testFolder + "my_test_file21.txt" });
+            rec2.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file22.txt", File_Path = testFolder + "my_test_file22.txt" });
+            rec2.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file23.txt", File_Path = testFolder + "my_test_file23.txt" });
+            rec2.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file24.txt", File_Path = testFolder + "my_test_file24.txt" });
 
             var mockDB_Context = new TestDBContext();
             mockDB_Context.Records.Add(rec1);
             mockDB_Context.Records.Add(rec2);
 
             //ACTION
-            int result = FileProcessor.createArchive(mockDB_Context, local_folder, target_repo,2);
+            int result = FileProcessor.createArchive(mockDB_Context, target_repo,2);
 
             //ASSERT
             Assert.AreEqual(0, result, $"Expected 2 files to be achived");
@@ -197,18 +197,18 @@ namespace EbDoc_FileProcessor_Tests
             string testDoc = testFolder + "TextFile1.txt";
 
             Record rec1 = new Record("TRADE_APP", null, null, null, "00TEST1234");
-            rec1.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file0.txt", File_Path = testFolder + "my_test_file0.txt", ArchiveNo = "00001" });
-            rec1.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file1.txt", File_Path = testFolder + "my_test_file1.txt", ArchiveNo = "00001" });
-            rec1.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file2.txt", File_Path = testFolder + "my_test_file2.txt", ArchiveNo = "00002" });
-            rec1.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file3.txt", File_Path = testFolder + "my_test_file3.txt" });
-            rec1.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file4.txt", File_Path = testFolder + "my_test_file4.txt" });
+            rec1.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file0.txt", File_Path = testFolder + "my_test_file0.txt", ArchiveNo = "00001" });
+            rec1.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file1.txt", File_Path = testFolder + "my_test_file1.txt", ArchiveNo = "00001" });
+            rec1.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file2.txt", File_Path = testFolder + "my_test_file2.txt", ArchiveNo = "00002" });
+            rec1.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file3.txt", File_Path = testFolder + "my_test_file3.txt" });
+            rec1.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file4.txt", File_Path = testFolder + "my_test_file4.txt" });
 
             Record rec2 = new Record("TRADE_APP", null, null, null, "200TEST1234");
-            rec2.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file20.txt", File_Path = testFolder + "my_test_file20.txt" });
-            rec2.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file21.txt", File_Path = testFolder + "my_test_file21.txt" });
-            rec2.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file22.txt", File_Path = testFolder + "my_test_file22.txt" });
-            rec2.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file23.txt", File_Path = testFolder + "my_test_file23.txt" });
-            rec2.Documents.Add(new Document { MSD_path = testDoc, File_Name = "my_test_file24.txt", File_Path = testFolder + "my_test_file24.txt" });
+            rec2.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file20.txt", File_Path = testFolder + "my_test_file20.txt" });
+            rec2.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file21.txt", File_Path = testFolder + "my_test_file21.txt" });
+            rec2.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file22.txt", File_Path = testFolder + "my_test_file22.txt" });
+            rec2.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file23.txt", File_Path = testFolder + "my_test_file23.txt" });
+            rec2.Documents.Add(new Document { Source_Repository = local_folder, MSD_path = testDoc, File_Name = "my_test_file24.txt", File_Path = testFolder + "my_test_file24.txt" });
             rec2.Group = "TEST_GROUP";
 
             var mockDB_Context = new TestDBContext();
@@ -223,7 +223,7 @@ namespace EbDoc_FileProcessor_Tests
                 System.IO.File.Delete(filePath);
 
             //ACTION
-            int result = FileProcessor.createArchive(mockDB_Context, local_folder, target_repo, 10);
+            int result = FileProcessor.createArchive(mockDB_Context, target_repo, 10);
 
             // clean up system
             foreach (var filePath in System.IO.Directory.GetFiles(expected_dir))

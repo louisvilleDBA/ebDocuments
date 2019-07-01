@@ -27,7 +27,6 @@ namespace EbDoc_Archiver
             {
                 FileProcessor.createArchive(
                         new EbDocContext(),
-                        System.Configuration.ConfigurationManager.AppSettings["SourceLocation"],
                         System.Configuration.ConfigurationManager.AppSettings["TargetLocation"],
                         files);
             }
