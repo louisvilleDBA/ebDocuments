@@ -40,7 +40,7 @@ namespace EbDoc_Processor
         private static readonly log4net.ILog log =
             log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
-        public static int loadMetadata(IEbDocContext context, string metadataFilename, string[] source_repo)
+        public static int loadMetadata(IEbDocContext context, string metadataFilename, string source_repo)
         {
             //IEbDocContext db = context;
             /* validate file is metadata file
@@ -55,23 +55,23 @@ namespace EbDoc_Processor
                 log.Error(errorMessage);
                 throw new FileNotFoundException(errorMessage);
             }
-            if (string.IsNullOrWhiteSpace(source_repo[0]))
+            if (string.IsNullOrWhiteSpace(source_repo))
             {
                 string message = "missing repo_source";
                 log.Error(message);
                 throw new ArgumentException(message);
             }
             else
-                repo_source = source_repo[0];
+                repo_source = source_repo;
 
-            if (string.IsNullOrWhiteSpace(source_repo[1]))
-            {
-                string message = "missing alt_repo_source";
-                log.Error(message);
-                throw new ArgumentException(message);
-            }
-            else
-                alt_repo_source = source_repo[1];
+            //if (string.IsNullOrWhiteSpace(source_repo[1]))
+            //{
+            //    string message = "missing alt_repo_source";
+            //    log.Error(message);
+            //    throw new ArgumentException(message);
+            //}
+            //else
+            //    alt_repo_source = source_repo[1];
 
             try
             {
@@ -82,9 +82,7 @@ namespace EbDoc_Processor
                     string ln = file.ReadLine();
 
                     if (string.Equals(ln, HEADER))
-                        counter = loadData(context, file, true);
-                    else if (string.Equals(ln, ALT_HEADER))
-                        counter = loadData(context, file, false);
+                        counter = loadData(context, file);
                     else
                     {
                         string errorMessage = $"{metadataFilename} is NOT a metadata file";
@@ -135,7 +133,7 @@ namespace EbDoc_Processor
             try
             {
                 var docs = db.Documents
-                            .Where(d => d.ArchiveNo == null && d.File_Size < 5000000 && !d.Is_Missing && d.Has_Record)
+                            .Where(d => d.ArchiveNo == null && d.File_Size < 50000000 && !d.Is_Missing && d.Has_Record)
                             .Take(max_file_count).ToList();
 
                 if (docs.Count() < 1)
@@ -299,7 +297,7 @@ namespace EbDoc_Processor
             return ret_val;
         }
 
-        private static Document GetDocument(string MSD_Path, string File_Name, bool IsRawData)
+        private static Document GetDocument(string MSD_Path, string File_Name)
         {
             // if the data is raw, use the source location, else the alt source 
             if (string.IsNullOrWhiteSpace(MSD_Path))
@@ -319,13 +317,6 @@ namespace EbDoc_Processor
                 doc.Is_Missing = false;
                 doc.File_Size = new FileInfo(Path.Combine(doc.Source_Repository, doc.MSD_path)).Length;
                 log.Debug($"source file:  [{Path.Combine(doc.Source_Repository, doc.MSD_path)}] exists");
-            }
-            else if (!IsRawData && File.Exists(Path.Combine(alt_repo_source,doc.File_Path)))
-            {
-                doc.Source_Repository = alt_repo_source;
-                doc.Is_Missing = false;
-                doc.File_Size = new FileInfo(Path.Combine(doc.Source_Repository, doc.File_Path)).Length;
-                log.Debug($"source file: [{Path.Combine(doc.Source_Repository, doc.File_Path)}] exists ");
             }
             else
             {
@@ -350,7 +341,7 @@ namespace EbDoc_Processor
             return doc;
         }
 
-        private static int loadData(IEbDocContext context, StreamReader file, bool IsRawData)
+        private static int loadData(IEbDocContext context, StreamReader file)
         {
             IEbDocContext db = context;
 
@@ -395,7 +386,7 @@ namespace EbDoc_Processor
                         content.GetValue(Array.IndexOf(headerItems, "HANSEN 7 WORK ORDER NO")).ToString(),
                         content.GetValue(Array.IndexOf(headerItems, "APPLICATION NO")).ToString()
                         );
-                    var doc = GetDocument(msd_path, file_name, IsRawData);
+                    var doc = GetDocument(msd_path, file_name);
 
                     log.Debug($"get record for [{row.B1_ALT_ID}]");
                     Record record = db.Records
