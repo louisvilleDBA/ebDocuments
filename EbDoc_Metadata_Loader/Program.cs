@@ -32,11 +32,13 @@ namespace EbDoc_Metadata_Loader
                 string errorMessage = $"metadata file [{metadataFilename}] not found!";
                 throw new FileNotFoundException(errorMessage);
             }
-            string[] source_repo = new string[] 
-            {
-                ConfigurationManager.AppSettings["SourceLocation"],
-                ConfigurationManager.AppSettings["AltSourceLocation"]
-            };
+            //string[] source_repo = new string[] 
+            //{
+            //    ConfigurationManager.AppSettings["SourceLocation"],
+            //    ConfigurationManager.AppSettings["AltSourceLocation"]
+            //};
+
+            string source_repo = ConfigurationManager.AppSettings["SourceLocation"];
 
             long result = FileProcessor.loadMetadata(new EbDocContext(), metadataFilename, source_repo);
             System.Console.WriteLine($"[{metadataFilename}] contains [{result}] files");

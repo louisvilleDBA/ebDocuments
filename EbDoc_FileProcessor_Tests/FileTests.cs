@@ -44,7 +44,8 @@ namespace EbDoc_FileProcessor_Tests
             //ARRANGE
             var metadataFilePath = @"Test_Docs\Trade_License_Sample.txt";
             var mockDB_Context = new TestDBContext();
-            var source_repo = new string[] { };
+            //var source_repo = new string[] { };
+            var source_repo = "";
 
             //ACTION
             int result = FileProcessor.loadMetadata(mockDB_Context, metadataFilePath, source_repo);
@@ -65,7 +66,8 @@ namespace EbDoc_FileProcessor_Tests
             //ARRANGE
             string metadataFilePath = @"Test_Docs\Trade_License_Sample_no_APNO.txt";
             var mockDB_Context = new TestDBContext();
-            var source_repo = new string[] { };
+            //var source_repo = new string[] { };
+            var source_repo = "";
 
             int expected_file_count = 10;
             int expected_record_count = 3;
@@ -97,10 +99,11 @@ namespace EbDoc_FileProcessor_Tests
             string metadataFilePath = @"Test_Docs\Trade_License_Sample.txt";
  
             var mockDB_Context = new TestDBContext();
-            var source_repos = new string[] {
-                local_folder,
-                "placeholder"
-            };
+            //var source_repos = new string[] {
+            //    local_folder,
+            //    "placeholder"
+            //};
+            var source_repos = local_folder;
 
             string expected_module = "TRADE_APP";  // "CDR_TRADELICENSE";
             string expected_file_name = "13GTD1000 NEW TEMP 2013.PDF";

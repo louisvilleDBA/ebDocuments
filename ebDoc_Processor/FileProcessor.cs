@@ -284,8 +284,14 @@ namespace EbDoc_Processor
             log.Debug($"begin load record [{row.B1_ALT_ID}] with accela data");
 
             var accela_id = db.ACCELA_IDs.FirstOrDefault(a => a.B1_ALT_ID == row.B1_ALT_ID);
+            if (row.Hansen_Module == "CASE_APP" && accela_id == null)
+                accela_id = db.ACCELA_IDs.FirstOrDefault(a => a.B1_ALT_ID == row.B1_ALT_ID + "-PM");
+            if (row.Hansen_Module == "CASE_APP" && accela_id == null)
+                accela_id = db.ACCELA_IDs.FirstOrDefault(a => a.B1_ALT_ID == row.B1_ALT_ID + "-ZM");
+            
             if (accela_id != null)
             {
+                row.B1_ALT_ID = accela_id.B1_ALT_ID;
                 row.Group = accela_id.B1_PER_GROUP;
                 row.Type = accela_id.B1_PER_TYPE;
                 row.Subtype = accela_id.B1_PER_SUB_TYPE;
